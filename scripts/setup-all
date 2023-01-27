@@ -1,0 +1,71 @@
+#! /usr/bin/env bash
+#
+# Set up all the things I need to build semgrep (CLI) on a Mac.
+#
+set -eu
+
+# Log all the sh*t
+set -x
+
+error() {
+  echo "*** ERROR: $@" >&2
+  return 1
+}
+
+if [[ "$(whoami)" != ssm-user ]]; then
+  error "You're not the expected user 'ssm-user'."
+fi
+
+if [[ "$(sudo whoami)" != root ]]; then
+  error "sudo isn't configured."
+fi
+
+# It's weird that the session doesn't start in $HOME if you ask me.
+cd
+
+# 'brew' comes pre-installed but isn't accessible until
+# '/usr/local/bin' is in PATH. We assume the interactive shell will be changed
+# from sh to bash.
+# To change the interactive shell to bash, follow the instructions at
+# https://aws.amazon.com/premiumsupport/knowledge-center/ssm-session-manager-change-shell/
+#
+if [[ ! -e .bashrc ]]; then
+  echo "Create a .bashrc"
+  cat > ~/.bashrc <<"EOF"
+# Get started in the current user's home.
+cd
+
+# Get access to brew and all the commands it will install.
+export PATH=/usr/local/bin:$PATH
+
+# Unlimited shell history
+# see http://superuser.com/questions/137438/how-to-unlimited-bash-shell-history
+export HISTFILESIZE=
+export HISTSIZE=
+export HISTTIMEFORMAT="[%F %T] "
+export HISTFILE=~/.bash_eternal_history
+PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
+
+git_stash_size() {
+  n=$( (git stash list 2> /dev/null || :) | wc -l )
+  if [ $n -gt 0 ]; then
+    echo -n " +$n"
+  fi
+}
+
+git_branch() {
+  echo -n "$(git branch 2> /dev/null \
+           | sed -e '/^[^*]/d' -e 's/* \(.*\)/\[\1\]/')"
+}
+
+# Set a prompt with user, current folder, git info, in color.
+if [ -n "$BASH_VERSION" ]; then
+  # See https://gist.github.com/mjambon/05a29dc7ddee04aa3a68d9b7d4002451
+  PS1='\[\033[00;35m\]$(date +%R:%S)\[\033[00m\] \[\033[00;32m\]\u\[\033[00m\] \[\033[00;34m\]$(if [ -n "$BASH" ]; then git_branch; git_stash_size; fi) \w \$\[\033[00m\] '
+fi
+
+EOF
+  error "We added a .bashrc that sets PATH. Please try again."
+fi
+
+which brew || error 'brew: not found. Check your $PATH.'
