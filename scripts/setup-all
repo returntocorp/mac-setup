@@ -35,6 +35,12 @@ if [[ ! -e .bashrc ]]; then
 # Get started in the current user's home.
 cd
 
+# This file is created by 'opam init' by default but is only loaded
+# automatically in a login shell.
+if [[ -e .bash_profile ]]; then
+   . .bash_profile
+fi
+
 # Get access to brew and all the commands it will install.
 export PATH=/usr/local/bin:$PATH
 
@@ -69,3 +75,17 @@ EOF
 fi
 
 which brew || error 'brew: not found. Check your $PATH.'
+
+# Install system packages
+brew install opam
+opam init
+
+# * There may be permission issues.
+#   Change the owner of folders to self as needed:
+#     chown -R $(whoami) /path/to/whatever/
+#
+# * There may be some missing symlinks. Follow the suggestions made by
+#   brew, such as running 'brew link ...' .
+#
+brew install python@3.11
+brew install pipenv
